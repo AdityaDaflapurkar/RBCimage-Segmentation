@@ -7,6 +7,7 @@ import math
 from sklearn import svm
 from sklearn.neural_network import MLPClassifier
 import pickle
+from scipy import ndimage
 	
 class Segment(object):
 
@@ -18,7 +19,7 @@ class Segment(object):
                             includes the dataset folder with '/'
             Initialize all your variables here
         """
-	self.model = MLPClassifier(hidden_layer_sizes=(64,32,64))
+	self.model = MLPClassifier(hidden_layer_sizes=(64,32,64),verbose=True)
 
     def train(self):
         """
@@ -26,22 +27,27 @@ class Segment(object):
 
             No return expected
         """
-	print ("Collecting images...")
+	print "Collecting images..."
 	input_images=[]
 	output_images=imread_collection('segmentation/Train_Data/*-mask.jpg')[0:164]
 	for i in xrange(164):
 		input_images.append(imread('segmentation/Train_Data/train-'+str(i)+'.jpg'))
 	x=[]
 	y=[]
+	# mlp = MLPClassifier(hidden_layer_sizes=(50,100,),verbose=True)
 	X=[]
 
 	for k in range(123):
 	# For each image
-		print ("iteration : ",k)
+		print k
 		img_gray = rgb2gray(input_images[k])
+		b = np.ones((6,6))
+
+		av = ndimage.convolve(img_gray, b, mode='reflect')
+
 		y = np.array(output_images[k]).flatten()
 		dist=np.empty([128,128])
-		x=np.empty([128,128,2])
+		x=np.empty([128,128,3])
 		n=math.sqrt(((0-63.5)**2)+((0-63.5)**2))
 		for i in xrange(len(dist)):
 			for j in xrange(len(dist)):
@@ -52,11 +58,11 @@ class Segment(object):
 				dist[i][j]=dist[i][j]/n
 				x[i][j][0]=dist[i][j]
 				x[i][j][1]=img_gray[i][j]
-			
+				x[i][j][2]=av[i][j]
 			
 		x=np.reshape(x,(len(x)*len(x),2))
-		#print x
-		#print y
+		print x
+		print y
 	 	
 		self.model.fit(x, y)
 
@@ -84,9 +90,9 @@ class Segment(object):
 			x[i][j][0]=dist[i][j]
 			x[i][j][1]=img_gray[i][j]
 
-	x=np.reshape(x,(len(x)*len(x),2))
-	#print x
-	#print y
+	x=np.reshape(x,(len(x)*len(x),3))
+	print x
+	print y
 	p = self.model.predict(x)
 	return np.reshape(p,(128,128))
 	
@@ -107,14 +113,13 @@ class Segment(object):
 	
 
 if __name__ == "__main__":
-	#obj = Segment('dataset/')
-	#obj.train()
+	obj = Segment('dataset/')
+	obj.train()
 	#obj.save_model(name="segment.gz")
 	obj = Segment.load_model()
-	print ("Collecting images...")
+	print "Collecting images..."
 	input_images=[]
-	print ("Done.")
-	for i in range(123,164):
+	for i in range(1,5):
 		input_images.append(imread('segmentation/Train_Data/train-'+str(i)+'.jpg'))
-		#imshow(obj.get_mask(input_images[0]))
-		#plt.show()
+		imshow(obj.get_mask(input_images[i]))
+		plt.show()
